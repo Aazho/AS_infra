@@ -125,7 +125,6 @@ module "frontend" {
   vpc_security_group_ids      = [module.front_sg.security_group_id]
   associate_public_ip_address = true
   user_data_base64            = base64encode(local.front_script)
-  key_name                    = "tests"
   user_data_replace_on_change = true
 
 }
@@ -143,7 +142,6 @@ module "frontend_2" {
   vpc_security_group_ids      = [module.front_sg.security_group_id]
   associate_public_ip_address = true
   user_data_base64            = base64encode(local.front_script_2)
-  key_name                    = "tests"
   user_data_replace_on_change = true
 
 }
@@ -210,7 +208,7 @@ module "front_sg" {
 
   # Accept HTTP and HTTPS connection fron the internet
   ingress_cidr_blocks = ["0.0.0.0/0"]
-  ingress_rules       = ["all-all"]
+  ingress_rules       = ["http-80-tcp", "https-443-tcp"]
   egress_rules        = ["all-all"]
 }
 
