@@ -25,11 +25,29 @@ locals {
     sudo echo "FASTAPI_URL=http://${module.backend.private_ip}:8000" >> /etc/environment
     sudo apt update -y
     sudo apt install -y nodejs npm git
+
+    curl -L -O https://artifacts.elastic.co/downloads/beats/filebeat/filebeat-8.13.3-amd64.deb
+    sudo dpkg -i filebeat-8.13.3-amd64.deb
+
+    cat <<EOF | sudo tee /etc/filebeat/filebeat.yml
+    filebeat.inputs:
+    - type: log
+      enabled: true
+      paths:
+        - /var/log/syslog
+
+    output.logstash:
+      hosts: ["${module.logcollector.private_ip}:5044"] 
+    EOF
+
+    sudo service filebeat start
+
     git clone https://github.com/Aazho/simple_node_front.git /app
+
     cd /app
     sudo npm install
     sudo npm i axios@0.21
-    sudo node app.js
+    sudo node app.js  
   EOT
 
   front_script_2 = <<-EOT
@@ -37,6 +55,22 @@ locals {
     sudo echo "FASTAPI_URL=http://${module.backend_2.private_ip}:8000" >> /etc/environment
     sudo apt update -y
     sudo apt install -y nodejs npm git
+    curl -L -O https://artifacts.elastic.co/downloads/beats/filebeat/filebeat-8.13.3-amd64.deb
+    sudo dpkg -i filebeat-8.13.3-amd64.deb
+
+    cat <<EOF | sudo tee /etc/filebeat/filebeat.yml
+    filebeat.inputs:
+    - type: log
+      enabled: true
+      paths:
+        - /var/log/syslog
+
+    output.logstash:
+      hosts: ["${module.logcollector.private_ip}:5044"] 
+    EOF
+
+    sudo service filebeat start
+
     git clone https://github.com/Aazho/simple_node_front.git /app
     cd /app
     sudo npm install
@@ -49,6 +83,22 @@ locals {
     exec > >(tee /var/log/user-data.log|logger -t user-data -s 2>/dev/console) 2>&1
     sudo apt update -y
     sudo apt install -y python3 python3-pip git
+
+    curl -L -O https://artifacts.elastic.co/downloads/beats/filebeat/filebeat-8.13.3-amd64.deb
+    sudo dpkg -i filebeat-8.13.3-amd64.deb
+
+    cat <<EOF | sudo tee /etc/filebeat/filebeat.yml
+    filebeat.inputs:
+    - type: log
+      enabled: true
+      paths:
+        - /var/log/syslog
+
+    output.logstash:
+      hosts: ["${module.logcollector.private_ip}:5044"] 
+    EOF
+
+    sudo service filebeat start
     sudo git clone https://github.com/Aazho/simple_fastapi_app.git /app
     cd /app
     sudo pip3 install uvicorn
@@ -60,6 +110,12 @@ locals {
     #!/bin/bash -v
     exec > >(tee /var/log/user-data.log|logger -t user-data -s 2>/dev/console) 2>&1
     sudo apt update -y
+    sudo apt install docker.io -y
+    sudo systemctl start docker 
+    sudo git clone https://github.com/Aazho/logstashn.git /logcol
+    cd /logcol
+    sudo docker build -t custom_log .
+    sudo docker run -p 5044:5044 -td custom_log
   EOT
 
 }
@@ -83,7 +139,7 @@ module "vpc" {
 
 
 # Aurora RDS Creation
-
+/*
 module "cluster" {
   source = "terraform-aws-modules/rds-aurora/aws"
 
@@ -109,6 +165,7 @@ module "cluster" {
 
   depends_on = [module.vpc]
 }
+*/
 
 ## Frontend
 
@@ -171,8 +228,8 @@ module "backend_2" {
   ami  = data.aws_ami.ubuntu.id
 
   instance_type               = "t2.micro"
-  availability_zone           = element(module.vpc.azs, 0)
-  subnet_id                   = element(module.vpc.private_subnets, 0)
+  availability_zone           = element(module.vpc.azs, 1)
+  subnet_id                   = element(module.vpc.private_subnets, 1)
   vpc_security_group_ids      = [module.private_sg.security_group_id]
   user_data_base64            = base64encode(local.back_script)
   user_data_replace_on_change = true
@@ -187,8 +244,8 @@ module "logcollector" {
   ami  = data.aws_ami.ubuntu.id
 
   instance_type               = "t2.micro"
-  availability_zone           = element(module.vpc.azs, 0)
-  subnet_id                   = element(module.vpc.private_subnets, 0)
+  availability_zone           = element(module.vpc.azs, 1)
+  subnet_id                   = element(module.vpc.private_subnets, 1)
   vpc_security_group_ids      = [module.private_sg.security_group_id]
   user_data_base64            = base64encode(local.logscript)
   user_data_replace_on_change = true
