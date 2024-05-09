@@ -139,6 +139,7 @@ module "vpc" {
 
 
 # Aurora RDS Creation
+# COST $$$$
 /*
 module "cluster" {
   source = "terraform-aws-modules/rds-aurora/aws"
